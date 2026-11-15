@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Railway Seat Allocation Simulator - College Project</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root {
+  --navy: #0b3558;
+  --navy-dark: #072239;
+  --navy-light: #164e7e;
+  
+  /* Primary Status Colors */
+  --avail-bg: #ffffff;
+  --avail-border: #cbd5e1;
+  --allotted-red: #dc2626;
+  
+  /* Priority Allotment Colors */
+  --FCFS: #dc2626;        /* Red: First Come First Served */
+  --GROUP: #2563eb;       /* Blue: Groups */
+  --SENIOR: #f59e0b;      /* Yellow: Age Preference (> 60) */
+  --GROUPSENIOR: #f59e0b; /* Yellow base with Blue indicator */
+  
+  --success: #16a34a;
+  --bg-page: #f1f5f9;
+  --card-bg: #ffffff;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg-page);
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+header {
+  background: linear-gradient(135deg, var(--navy), var(--navy-dark));
+  color: #fff;
+  padding: 18px 36px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+header small {
+  display: block;
+  opacity: 0.88;
+  font-size: 13px;
+  margin-top: 4px;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.pill {
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 30px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  backdrop-filter: blur(4px);
+}
+.server-badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.server-badge.live {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+.server-badge.local {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #7dd3fc;
+}
+
+nav {
+  background: #fff;
+  display: flex;
+  overflow-x: auto;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  padding: 0 30px;
+  border-bottom: 1px solid #e2e8f0;
+}
+nav button {
+  border: 0;
+  background: none;
+  padding: 16px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #64748b;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+nav button:hover {
+  color: var(--navy);
+  background: #f8fafc;
+}
+nav button.on {
+  color: var(--navy);
+  font-weight: 700;
+  border-color: var(--navy);
+  background: #f1f5f9;
+}
+
+main {
+  padding: 24px 36px;
+  max-width: 1440px;
+  margin: auto;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+.stat-card {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+}
+.stat-card b {
+  font-size: 26px;
+  color: var(--navy);
+  line-height: 1.2;
+}
+.stat-card span {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.card {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 24px;
+}
+h2 {
+  margin: 0 0 6px;
+  color: var(--navy);
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sub {
+  color: var(--text-muted);
+  margin: 0 0 18px;
+  font-size: 14px;
+}
+
+/* Three Section Legend */
+.three-sections-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  margin: 14px 0 20px;
+}
+.sec-box {
+  border-radius: 8px;
+  padding: 12px 16px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+}
+.sec-box-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.sec-badge-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.tag-white { background: #ffffff; color: #0f172a; border: 2px solid #cbd5e1; }
+.tag-red { background: #dc2626; color: #ffffff; }
+.tag-priority { background: var(--navy); color: #ffffff; }
+
+.sec-box-body {
+  font-size: 13px;
+  color: #334155;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.color-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  margin-right: 6px;
+  vertical-align: -2px;
+}
+
+/* View Mode Switcher */
+.view-mode-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  background: #f1f5f9;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 18px;
+  border: 1px solid #e2e8f0;
+}
+.btn-group {
+  display: inline-flex;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+}
+.btn-group button {
+  background: #fff;
+  border: 0;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #475569;
+}
+.btn-group button.active {
+  background: var(--navy);
+  color: #fff;
+}
+
+/* Coach Layout */
+.coach {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 16px;
+}
+.bay {
+  border: 2px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 12px;
+  background: #f8fafc;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.bay-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed #cbd5e1;
+}
+.bay-hdr h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.bay-hdr small {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.seats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.seat {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 4px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.15;
+  text-align: center;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+  outline: none;
+}
+.seat:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.18);
+  z-index: 2;
+}
+.seat small {
+  display: block;
+  font-weight: 500;
+  font-size: 11px;
+  margin-top: 3px;
+}
+.seat .tag-txt {
+  display: block;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-top: 2px;
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
+/* Seat Coloring Rules */
+/* SECTION A: Available -> White Color */
+.seat.free {
+  background: #ffffff !important;
+  color: #1e293b !important;
+  border: 2px solid #94a3b8 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.seat.free:hover {
+  border-color: var(--navy) !important;
+  background: #f8fafc !important;
+}
+
+/* Allotted in Section A/B Mode -> Red */
+.seat.mode-allotted {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border: 2px solid #b91c1c !important;
+}
+
+/* Priority Mode Allotted Seats */
+/* FCFS -> Red */
+.seat.st-FCFS {
+  background: var(--FCFS) !important;
+  color: #ffffff !important;
+  border: 2px solid #b91c1c !important;
+}
+
+/* Group -> Blue */
+.seat.st-GROUP {
+  background: var(--GROUP) !important;
+  color: #ffffff !important;
+  border: 2px solid #1d4ed8 !important;
+}
+
+/* Age Preference / Senior (>60) -> Yellow */
+.seat.st-SENIOR {
+  background: var(--SENIOR) !important;
+  color: #000000 !important;
+  border: 2px solid #d97706 !important;
+  font-weight: 800;
+}
+.seat.st-SENIOR small, .seat.st-SENIOR .tag-txt {
+  color: #451a03;
+  font-weight: 700;
+}
+
+/* Group + Senior -> Golden Yellow with Blue border */
+.seat.st-GROUPSENIOR {
+  background: #f59e0b !important;
+  color: #000000 !important;
+  border: 3px solid #2563eb !important;
+  font-weight: 800;
+}
+.seat.st-GROUPSENIOR .tag-txt {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+/* Form Styles */
+input, select {
+  padding: 11px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+  width: 100%;
+  background: #fff;
+  color: var(--text-main);
+  transition: border-color 0.2s ease;
+}
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(11, 53, 88, 0.15);
+}
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 5px;
+}
+
+.g3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.g2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1.2fr auto;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: end;
+  background: #f8fafc;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+@media (max-width: 768px) {
+  .row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+.btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 11px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  background: var(--navy);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.btn:hover { background: var(--navy-light); }
+.btn.g { background: #16a34a; }
+.btn.g:hover { background: #15803d; }
+.btn.r { background: #dc2626; }
+.btn.r:hover { background: #b91c1c; }
+.btn.o { background: #475569; }
+.btn.o:hover { background: #334155; }
+
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 12px;
+}
+.badge.ok { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+.badge.bad { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+.banner-msg {
+  margin: 14px 0;
+  padding: 14px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.banner-msg.s { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+.banner-msg.e { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+th, td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+th {
+  background: #f1f5f9;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.sec { display: none; }
+.sec.on { display: block; }
+
+/* Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 20px;
+}
+.modal .card {
+  min-width: 360px;
+  max-width: 550px;
+  width: 100%;
+  margin: 0;
+  animation: popIn 0.2s ease;
+}
+@keyframes popIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Ticket */
+#ticket {
+  border: 2px solid var(--navy);
+  border-radius: 12px;
+  padding: 24px;
+  background: #fff;
+  margin-top: 18px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+#ticket .top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--navy);
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.pnrbox {
+  background: #0b3558;
+  color: #fff;
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+.quick {
+  margin: 12px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+.quick button {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 20px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.quick button:hover { background: #e2e8f0; }
+
+@media print {
+  body * { visibility: hidden; }
+  #ticket, #ticket * { visibility: visible; }
+  #ticket { position: absolute; left: 0; top: 0; width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🚆 Smart Railway Seat Allocation Simulator</h1>
+    <small>Allocation Rules: Single &le; 60 &rarr; FCFS (Red) · Group &rarr; Bay Co-location (Blue) · Age &gt; 60 &rarr; Senior Lower Berth Priority (Yellow)</small>
+  </div>
+  <div class="header-right">
+    <div id="srv-badge" class="server-badge live">● Checking backend...</div>
+    <div class="pill" id="hdr">Loading system state...</div>
+  </div>
+</header>
+
+<nav id="nav"></nav>
+
+<main>
+  <!-- Global Stats -->
+  <div class="stats" id="stats"></div>
+
+  <!-- TAB 1: COACH VISUALIZER -->
+  <section class="sec on" id="t-coach">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div>
+          <h2>💺 Coach Visualizer (Coach S1 &ndash; 72 Berths)</h2>
+          <p class="sub">Click any berth to view passenger details, ticket price, journey route, and booking timestamp.</p>
+        </div>
+      </div>
+
+      <!-- Three Section Legend -->
+      <div class="three-sections-container">
+        <!-- Section A: Available -->
+        <div class="sec-box">
+          <div class="sec-box-hdr">
+            <b>Section A: Available Berths</b>
+            <span class="sec-badge-tag tag-white">SECTION A</span>
+          </div>
+          <div class="sec-box-body">
+            <div><i class="color-dot" style="background:#ffffff; border:2px solid #94a3b8;"></i> <b>White Color:</b> Vacant seats ready to book</div>
+            <div style="font-weight:700; color:var(--navy); margin-top:4px;" id="sec-a-stat">72 Berths Available</div>
+          </div>
+        </div>
+
+        <!-- Section B: Allotted -->
+        <div class="sec-box">
+          <div class="sec-box-hdr">
+            <b>Section B: Allotted Berths</b>
+            <span class="sec-badge-tag tag-red">SECTION B</span>
+          </div>
+          <div class="sec-box-body">
+            <div><i class="color-dot" style="background:#dc2626;"></i> <b>Red Base Color:</b> Allotted / Confirmed berths</div>
+            <div style="font-weight:700; color:#dc2626; margin-top:4px;" id="sec-b-stat">0 Berths Allotted</div>
+          </div>
+        </div>
+
+        <!-- Section C: Priority Based -->
+        <div class="sec-box">
+          <div class="sec-box-hdr">
+            <b>Priority-Based Allotment</b>
+            <span class="sec-badge-tag tag-priority">PRIORITY RULES</span>
+          </div>
+          <div class="sec-box-body">
+            <div><i class="color-dot" style="background:#dc2626;"></i> <b>Red:</b> First Come First Served (FCFS - Single)</div>
+            <div><i class="color-dot" style="background:#2563eb;"></i> <b>Blue:</b> Groups (Co-located in compartment)</div>
+            <div><i class="color-dot" style="background:#f59e0b; border:1px solid #d97706;"></i> <b>Yellow:</b> Age Preference (Senior &gt; 60 Lower Berth)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- View Switcher -->
+      <div class="view-mode-bar">
+        <div>
+          <b>Display View:</b> <span id="cur-view-label" style="font-weight:700; color:var(--navy);">Priority-Based Colors</span>
+        </div>
+        <div class="btn-group">
+          <button id="btn-view-prio" class="active" onclick="setViewMode('priority')">🎨 Priority View (Red, Blue, Yellow)</button>
+          <button id="btn-view-sec" onclick="setViewMode('section')">📊 Section A/B View (White vs Red)</button>
+        </div>
+      </div>
+
+      <!-- Coach Grid -->
+      <div class="coach" id="coach"></div>
+    </div>
+  </section>
+
+  <!-- TAB 2: JOURNEY SETUP -->
+  <section class="sec" id="t-setup">
+    <div class="card">
+      <h2>🛤️ Journey Setup &amp; Route Confirmation</h2>
+      <p class="sub">Set where you have to go from and the destination. Confirming updates the active route for all seat bookings.</p>
+      
+      <div class="g2">
+        <div>
+          <label for="src">Pickup Station (From Where You Have to Go) *</label>
+          <input id="src" placeholder="e.g. New Delhi (NDLS)">
+        </div>
+        <div>
+          <label for="dst">Destination Station (Where You Have to Go) *</label>
+          <input id="dst" placeholder="e.g. Lucknow (LKO)">
+        </div>
+      </div>
+
+      <div class="g2">
+        <div>
+          <label for="trn">Train Name &amp; Number</label>
+          <input id="trn" placeholder="e.g. 12004 - Lucknow Shatabdi Exp">
+        </div>
+        <div>
+          <label for="prc">Price per Seat (₹) *</label>
+          <input id="prc" type="number" min="1" placeholder="e.g. 500">
+        </div>
+      </div>
+
+      <p style="margin-top:20px;">
+        <button class="btn g" onclick="saveCfg()" style="padding:12px 28px; font-size:15px;">
+          ✓ Confirm Route &amp; Destination
+        </button>
+      </p>
+      
+      <div id="cfgmsg"></div>
+    </div>
+  </section>
+
+  <!-- TAB 3: BOOK TICKETS -->
+  <section class="sec" id="t-book">
+    <div class="card">
+      <h2>🎫 Book Railway Tickets</h2>
+      <p class="sub">
+        Confirm destination and passenger details. System automatically allots seats using:
+        <b>FCFS (Red)</b> for individuals, <b>Group (Blue)</b> for 2+ passengers in same bay, and <b>Age Preference (Yellow)</b> with lower berth priority for passengers above 60.
+      </p>
+
+      <!-- Route Header for Booking -->
+      <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:14px; margin-bottom:18px;">
+        <div style="font-size:13px; font-weight:700; color:var(--navy); margin-bottom:8px;">JOURNEY ROUTE CONFIRMATION:</div>
+        <div class="g3" style="margin-bottom:0;">
+          <div>
+            <label>From (Pickup)</label>
+            <input id="bsrc" placeholder="From station">
+          </div>
+          <div>
+            <label>To (Destination)</label>
+            <input id="bdst" placeholder="Destination station">
+          </div>
+          <div>
+            <label>Fare per Seat (₹)</label>
+            <input id="bprc" type="number" min="1" placeholder="500">
+          </div>
+        </div>
+      </div>
+
+      <!-- Passengers List -->
+      <label style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:8px;">Passenger Details:</label>
+      <div id="rows"></div>
+
+      <p style="margin-top:12px;">
+        <button class="btn o" onclick="addRow()">+ Add Another Passenger</button>
+      </p>
+
+      <div style="background:#f1f5f9; padding:14px 18px; border-radius:8px; margin:16px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div>
+          <b>Detected Allocation Strategy:</b> <span class="badge" id="det" style="font-size:13px;">Analyzing...</span>
+        </div>
+        <div style="font-size:16px;">
+          Total Fare: <b id="tot" style="color:var(--navy); font-size:20px;">₹0</b>
+        </div>
+      </div>
+
+      <button class="btn g" onclick="book()" style="padding:13px 32px; font-size:16px; font-weight:700;">
+        ✓ Confirm Booking &amp; Allot Seats
+      </button>
+
+      <div id="bmsg"></div>
+    </div>
+  </section>
+
+  <!-- TAB 4: TICKET GENERATOR -->
+  <section class="sec" id="t-ticket">
+    <div class="card">
+      <h2>📄 E-Ticket Generator</h2>
+      <p class="sub">View, print, or download official Indian Railways Electronic Reservation Slip (ERS).</p>
+      
+      <div style="display:flex; gap:10px; max-width:500px;">
+        <input id="pnrin" placeholder="Enter PNR-XXXXXX" style="text-transform:uppercase;">
+        <button class="btn" onclick="showTicket($('pnrin').value.trim().toUpperCase())">View Ticket</button>
+      </div>
+      
+      <div class="quick" id="quick"></div>
+      
+      <p style="margin:16px 0 8px;">
+        <button class="btn" onclick="dl('pdf')">📥 Download PDF</button>
+        <button class="btn g" onclick="dl('png')">🖼️ Download PNG</button>
+        <button class="btn o" onclick="window.print()">🖨️ Print Ticket</button>
+      </p>
+      
+      <div id="ticket"><i>Enter a PNR or select one from quick picks above to view ticket.</i></div>
+    </div>
+  </section>
+
+  <!-- TAB 5: SEAT SWAP -->
+  <section class="sec" id="t-swap">
+    <div class="card">
+      <h2>🔄 Seat Swap &amp; Reallocation</h2>
+      <p class="sub">Swap seats between two passengers, or move a passenger to an available berth in Section A.</p>
+      
+      <div class="g2">
+        <div>
+          <label>1. Source Allotted Seat</label>
+          <select id="sa" onchange="prev()"></select>
+        </div>
+        <div>
+          <label>2. Target Seat (Allotted or Available)</label>
+          <select id="sb" onchange="prev()"></select>
+        </div>
+      </div>
+      
+      <div class="g2" id="sprev" style="margin:16px 0;"></div>
+      
+      <button class="btn g" onclick="doSwap()">Confirm &amp; Execute Swap</button>
+      <div id="smsg"></div>
+    </div>
+  </section>
+
+  <!-- TAB 6: ACTIVE BOOKINGS -->
+  <section class="sec" id="t-active">
+    <div class="card">
+      <h2>📋 Active Bookings &amp; Cancellations</h2>
+      <p class="sub">Cancelling immediately frees the berths back to Section A (Available - White color).</p>
+      
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>PNR</th>
+              <th>Strategy &amp; Priority</th>
+              <th>Status</th>
+              <th>Passengers &amp; Allotted Berths</th>
+              <th>Journey &amp; Fare</th>
+              <th>Booking Time</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="abody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <p style="text-align:right; margin-top:20px;">
+    <button class="btn r" onclick="resetAll()">⚠️ Reset Entire System (Clear All Bookings)</button>
+  </p>
+</main>
+
+<!-- Details Modal -->
+<div class="modal" id="modal" onclick="if(event.target===this)this.style.display='none'">
+  <div class="card" id="mbox"></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const TABS = [
+  ['coach', '💺 Coach Visualizer'],
+  ['setup', '🛤️ Journey Setup'],
+  ['book', '🎫 Book Tickets'],
+  ['ticket', '📄 Ticket Generator'],
+  ['swap', '🔄 Seat Swap'],
+  ['active', '📋 Active Bookings']
+];
+const FULL = {LB:'Lower Berth', MB:'Middle Berth', UB:'Upper Berth', SL:'Side Lower', SU:'Side Upper'};
+const TYPES = ["LB", "MB", "UB", "LB", "MB", "UB", "SL", "SU"];
+const LOWER = new Set(["LB", "SL"]);
+const kind = n => TYPES[(n - 1) % 8];
+
+let S = null;
+let cfgLoaded = false;
+let curViewMode = 'priority'; // 'priority' or 'section'
+let isBackendLive = false;
+
+// Determine API endpoint base
+const API_BASE = (window.location.protocol === 'file:' || window.location.port !== '5000') ? 'http://127.0.0.1:5000' : '';
+
+// Client Fallback Engine (guarantees simulator works even if user hasn't run run.bat yet!)
+const LocalEngine = {
+  KEY: 'railway_state_v3',
+  getState() {
+    try {
+      const d = localStorage.getItem(this.KEY);
+      if (d) return JSON.parse(d);
+    } catch(e){}
+    return {
+      config: {
+        train: "12004 - Lucknow Shatabdi Exp",
+        source: "New Delhi (NDLS)",
+        dest: "Lucknow (LKO)",
+        price: 500
+      },
+      bookings: {}
+    };
+  },
+  saveState(st) {
+    try { localStorage.setItem(this.KEY, JSON.stringify(st)); } catch(e){}
+  },
+  buildStateResponse() {
+    const st = this.getState();
+    const c = st.config;
+    const occ = {};
+    Object.values(st.bookings).forEach(b => {
+      if (b.status === 'CONFIRMED') {
+        (b.passengers || []).forEach(p => { occ[p.seat] = {b, p}; });
+      }
+    });
+
+    const seats = [];
+    let fcfs_cnt = 0, grp_cnt = 0, snr_cnt = 0;
+
+    for (let n = 1; n <= 72; n++) {
+      let o = null;
+      if (occ[n]) {
+        const {b, p} = occ[n];
+        let prio = p.priority || (b.strategy === 'SENIOR' || p.age > 60 ? 'SENIOR' : (b.strategy.includes('GROUP') ? (p.age > 60 ? 'GROUP+SENIOR' : 'GROUP') : 'FCFS'));
+        if (prio === 'FCFS') fcfs_cnt++;
+        else if (prio === 'SENIOR' || prio === 'GROUP+SENIOR') { snr_cnt++; if (prio === 'GROUP+SENIOR') grp_cnt++; }
+        else if (prio === 'GROUP') grp_cnt++;
+
+        o = {
+          pnr: b.pnr,
+          name: p.name,
+          age: p.age,
+          gender: p.gender,
+          strategy: b.strategy,
+          priority: prio,
+          section: "B",
+          time: b.time,
+          price: b.price || c.price,
+          source: b.source || c.source,
+          dest: b.dest || c.dest,
+          train: b.train || c.train
+        };
+      }
+
+      seats.append ? null : seats.push({
+        n,
+        bay: Math.floor((n - 1) / 8) + 1,
+        type: kind(n),
+        is_lower: LOWER.has(kind(n)),
+        section: o ? "B" : "A",
+        priority: o ? o.priority : "AVAILABLE",
+        occ: o
+      });
+    }
+
+    const free_cnt = seats.filter(s => !s.occ).length;
+    return {
+      config: c,
+      seats,
+      bookings: Object.values(st.bookings).sort((a,b) => (b.time||'').localeCompare(a.time||'')),
+      stats: {
+        total_seats: 72,
+        available_seats: free_cnt,
+        allotted_seats: 72 - free_cnt,
+        fcfs_count: fcfs_cnt,
+        group_count: grp_cnt,
+        senior_count: snr_cnt
+      }
+    };
+  },
+  saveConfig(d) {
+    const st = this.getState();
+    const c = st.config;
+    c.source = (d.source || c.source || "New Delhi (NDLS)").trim();
+    c.dest = (d.dest || c.dest || "Lucknow (LKO)").trim();
+    c.train = (d.train || c.train || "12004 - Lucknow Shatabdi Exp").trim();
+    c.price = parseFloat(d.price) > 0 ? parseFloat(d.price) : (c.price || 500);
+    this.saveState(st);
+    return { ok: true, config: c, message: `Journey confirmed: ${c.source} ➔ ${c.dest} (₹${c.price}/seat)` };
+  },
+  book(payload) {
+    const st = this.getState();
+    const c = st.config;
+    if (payload.source) c.source = payload.source.trim();
+    if (payload.dest) c.dest = payload.dest.trim();
+    if (parseFloat(payload.price) > 0) c.price = parseFloat(payload.price);
+
+    const occ = new Set();
+    Object.values(st.bookings).forEach(b => {
+      if (b.status === 'CONFIRMED') {
+        (b.passengers || []).forEach(p => occ.add(p.seat));
+      }
+    });
+    const free = [];
+    for (let i = 1; i <= 72; i++) { if (!occ.has(i)) free.push(i); }
+
+    const raw_ps = payload.passengers || [];
+    if (!raw_ps.length) return { error: "Please enter passenger details" };
+    const n = raw_ps.length;
+    if (n > free.length) return { error: "Not enough berths available" };
+
+    const ps = raw_ps.map((p, i) => ({
+      name: p.name.trim() || `Passenger ${i+1}`,
+      age: parseInt(p.age) || 28,
+      gender: p.gender || 'Male',
+      preference: p.preference || 'No Preference'
+    }));
+
+    const seniors = ps.filter(p => p.age > 60);
+    let strat = 'FCFS';
+    let assignedSeats = [];
+
+    if (n === 1) {
+      if (seniors.length > 0) {
+        strat = 'SENIOR';
+        const low = free.find(s => LOWER.has(kind(s)));
+        const s = low || free[0];
+        assignedSeats = [s];
+        ps[0].priority = 'SENIOR';
+      } else {
+        strat = 'FCFS';
+        assignedSeats = [free[0]];
+        ps[0].priority = 'FCFS';
+      }
+    } else {
+      strat = seniors.length > 0 ? 'GROUP+SENIOR' : 'GROUP';
+      const bays = {};
+      free.forEach(s => {
+        const b = Math.floor((s - 1) / 8);
+        (bays[b] = bays[b] || []).push(s);
+      });
+
+      const fitBay = Object.values(bays).find(b => b.length >= n);
+      let pool = fitBay ? [...fitBay] : [];
+      if (!pool.length) {
+        const sortedBays = Object.values(bays).sort((a,b) => b.length - a.length);
+        sortedBays.forEach(b => { pool.push(...b); });
+      }
+
+      const lows = pool.filter(s => LOWER.has(kind(s))).concat(free.filter(s => LOWER.has(kind(s)) && !pool.includes(s)));
+      const used = new Set();
+
+      ps.forEach(p => {
+        if (p.age > 60) {
+          const s = lows.find(x => !used.has(x)) || pool.find(x => !used.has(x)) || free.find(x => !used.has(x));
+          used.add(s);
+          p.seat = s;
+          p.priority = 'GROUP+SENIOR';
+        }
+      });
+      const rest = pool.filter(x => !used.has(x)).concat(free.filter(x => !used.has(x)));
+      ps.forEach(p => {
+        if (!p.seat) {
+          const s = rest.shift();
+          used.add(s);
+          p.seat = s;
+          p.priority = 'GROUP';
+        }
+      });
+      assignedSeats = ps.map(p => p.seat);
+    }
+
+    ps.forEach(p => {
+      p.type = kind(p.seat);
+      p.bay = Math.floor((p.seat - 1) / 8) + 1;
+    });
+
+    const pnr = 'PNR-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    const bk = {
+      pnr,
+      strategy: strat,
+      status: 'CONFIRMED',
+      time: new Date().toISOString(),
+      source: c.source,
+      dest: c.dest,
+      train: c.train,
+      price: c.price,
+      total: c.price * n,
+      passengers: ps
+    };
+    st.bookings[pnr] = bk;
+    this.saveState(st);
+
+    return {
+      ok: true,
+      pnr,
+      strategy: strat,
+      seats: assignedSeats,
+      passengers: ps,
+      booking: bk,
+      message: `Booking Confirmed! PNR: ${pnr} (${strat})`
+    };
+  },
+  cancel(pnr) {
+    const st = this.getState();
+    if (st.bookings[pnr]) {
+      st.bookings[pnr].status = 'CANCELLED';
+      this.saveState(st);
+      return { ok: true };
+    }
+    return { error: "Booking not found" };
+  },
+  swap(a, b) {
+    const st = this.getState();
+    let pa = null, pb = null;
+    Object.values(st.bookings).forEach(bk => {
+      if (bk.status === 'CONFIRMED') {
+        (bk.passengers || []).forEach(p => {
+          if (p.seat == a) pa = p;
+          if (p.seat == b) pb = p;
+        });
+      }
+    });
+    if (!pa) return { error: "Source seat is not allotted" };
+    if (pb) {
+      pb.seat = parseInt(a);
+      pb.type = kind(a);
+    }
+    pa.seat = parseInt(b);
+    pa.type = kind(b);
+    this.saveState(st);
+    return { ok: true, message: `Swapped Seat #${a} with Seat #${b}` };
+  },
+  reset() {
+    localStorage.removeItem(this.KEY);
+    return { ok: true };
+  }
+};
+
+async function api(u, d) {
+  try {
+    const opts = d !== undefined ? {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(d)
+    } : { method: 'GET' };
+    
+    // Attempt connecting to Flask backend
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1200);
+    opts.signal = controller.signal;
+
+    const r = await fetch(API_BASE + u, opts);
+    clearTimeout(timeoutId);
+    
+    if (r.ok) {
+      isBackendLive = true;
+      updateServerBadge(true);
+      return await r.json();
+    }
+  } catch (err) {
+    // Backend offline / not started yet -> Fallback to client engine
+  }
+
+  isBackendLive = false;
+  updateServerBadge(false);
+
+  // Client Fallback responses
+  if (u === '/api/state') return LocalEngine.buildStateResponse();
+  if (u === '/api/config') return LocalEngine.saveConfig(d);
+  if (u === '/api/book') return LocalEngine.book(d);
+  if (u === '/api/cancel') return LocalEngine.cancel(d.pnr);
+  if (u === '/api/swap') return LocalEngine.swap(d.a, d.b);
+  if (u === '/api/reset') return LocalEngine.reset();
+
+  return { error: "Operation completed in local mode." };
+}
+
+function updateServerBadge(live) {
+  const el = $('srv-badge');
+  if (!el) return;
+  if (live) {
+    el.className = 'server-badge live';
+    el.textContent = '● Connected: Flask Backend (Port 5000)';
+    el.title = 'Live Python Flask backend running seamlessly';
+  } else {
+    el.className = 'server-badge local';
+    el.textContent = '● Client Engine Active (Run run.bat for Flask)';
+    el.title = 'Simulator is running in high-performance browser mode. Launch run.bat anytime to connect Flask backend!';
+  }
+}
+
+function setViewMode(m) {
+  curViewMode = m;
+  $('btn-view-prio').classList.toggle('active', m === 'priority');
+  $('btn-view-sec').classList.toggle('active', m === 'section');
+  $('cur-view-label').textContent = m === 'priority' ? 'Priority-Based Colors (Red: FCFS, Blue: Group, Yellow: Age)' : 'Section A/B Status (White: Available, Red: Allotted)';
+  render();
+}
+
+function tab(t) {
+  TABS.forEach(([k]) => {
+    const el = $('t-' + k);
+    if (el) el.classList.toggle('on', k === t);
+  });
+  [...$('nav').children].forEach((b, i) => b.classList.toggle('on', TABS[i][0] === t));
+  $('stats').style.display = t === 'ticket' ? 'none' : 'grid';
+  if (t === 'coach') render();
+}
+
+$('nav').innerHTML = TABS.map(([k, l]) => `<button onclick="tab('${k}')">${l}</button>`).join('');
+
+async function load() {
+  S = await api('/api/state');
+  render();
+}
+
+function render() {
+  if (!S || !S.config) return;
+  const c = S.config;
+  const occ = S.seats.filter(s => s.occ);
+  const act = S.bookings.filter(b => b.status === 'CONFIRMED');
+
+  $('hdr').textContent = `Train ${c.train || '12004'} · ${c.source || 'New Delhi'} → ${c.dest || 'Lucknow'} · ₹${c.price || 500}/seat`;
+
+  if (!cfgLoaded) {
+    $('src').value = c.source || '';
+    $('dst').value = c.dest || '';
+    $('trn').value = c.train || '';
+    $('prc').value = c.price || '';
+    
+    $('bsrc').value = c.source || '';
+    $('bdst').value = c.dest || '';
+    $('bprc').value = c.price || '';
+    cfgLoaded = true;
+  }
+
+  // Update Section counts
+  const availCount = 72 - occ.length;
+  $('sec-a-stat').textContent = `${availCount} Berths Available (Section A - White)`;
+  $('sec-b-stat').textContent = `${occ.length} Berths Allotted (Section B - Red)`;
+
+  const rev = act.reduce((a, b) => a + (b.total || 0), 0);
+  $('stats').innerHTML = [
+    [(occ.length / 72 * 100).toFixed(1) + '%', 'Coach Utilization'],
+    [`${availCount} / 72`, 'Section A (Available - White)'],
+    [`${occ.length} / 72`, 'Section B (Allotted - Red)'],
+    [act.length, 'Active Bookings'],
+    ['₹' + rev, 'Total Revenue Collected']
+  ].map(x => `<div class="stat-card"><b>${x[0]}</b><span>${x[1]}</span></div>`).join('');
+
+  // Coach grid
+  let h = '';
+  for (let b = 1; b <= 9; b++) {
+    const baySeats = S.seats.filter(s => s.bay === b);
+    h += `<div class="bay">
+      <div class="bay-hdr">
+        <h4>BAY ${b} (Seats ${(b - 1) * 8 + 1}&ndash;${b * 8})</h4>
+        <small>${baySeats.filter(s => !s.occ).length} Free</small>
+      </div>
+      <div class="seats">`;
+
+    baySeats.forEach(s => {
+      let seatCls = 'free';
+      let tagTxt = 'AVAILABLE';
+      let titleTxt = 'Seat #' + s.n + ' (' + s.type + ') - Section A: Available';
+
+      if (s.occ) {
+        if (curViewMode === 'section') {
+          // Section View: Allotted is Red
+          seatCls = 'mode-allotted';
+          tagTxt = 'ALLOTTED';
+        } else {
+          // Priority View: Red FCFS, Blue Group, Yellow Senior
+          const prio = s.occ.priority || s.occ.strategy || 'FCFS';
+          if (prio === 'SENIOR') {
+            seatCls = 'st-SENIOR';
+            tagTxt = 'AGE > 60';
+          } else if (prio === 'GROUP+SENIOR') {
+            seatCls = 'st-GROUPSENIOR';
+            tagTxt = 'GRP+AGE';
+          } else if (prio === 'GROUP') {
+            seatCls = 'st-GROUP';
+            tagTxt = 'GROUP';
+          } else {
+            seatCls = 'st-FCFS';
+            tagTxt = 'FCFS';
+          }
+        }
+        titleTxt = `Seat #${s.n} (${s.type}) - ${s.occ.name} (${s.occ.age}y) [${s.occ.priority || s.occ.strategy}]`;
+      }
+
+      h += `<button class="seat ${seatCls}" onclick="seatInfo(${s.n})" title="${esc(titleTxt)}">
+        ${s.n}
+        <small>${s.type}</small>
+        <span class="tag-txt">${tagTxt}</span>
+      </button>`;
+    });
+
+    h += `</div></div>`;
+  }
+  $('coach').innerHTML = h;
+
+  // Swap options
+  const lab = s => `Seat #${s.n} (${s.type}, Bay ${s.bay}) - ${s.occ ? esc(s.occ.name) + ' [' + s.occ.pnr + ']' : 'Section A (Available)'}`;
+  const pa = $('sa').value, pb = $('sb').value;
+  $('sa').innerHTML = occ.map(s => `<option value="${s.n}">${lab(s)}</option>`).join('') || '<option value="">No allotted seats</option>';
+  $('sb').innerHTML = S.seats.map(s => `<option value="${s.n}">${lab(s)}</option>`).join('');
+  if (pa) $('sa').value = pa;
+  if (pb) $('sb').value = pb;
+  prev();
+
+  // Active bookings table
+  $('abody').innerHTML = S.bookings.map(b => {
+    const isAct = b.status === 'CONFIRMED';
+    return `<tr>
+      <td><b>${b.pnr}</b></td>
+      <td>
+        <span class="badge ${b.strategy === 'FCFS' ? 'badge tag-red' : (b.strategy === 'SENIOR' ? 'badge tag-white' : 'badge tag-priority')}">
+          ${b.strategy}
+        </span>
+      </td>
+      <td><span class="badge ${isAct ? 'ok' : 'bad'}">${b.status}</span></td>
+      <td>
+        ${b.passengers.map(p => `
+          <div>
+            <b>${esc(p.name)}</b> (${p.age}y, ${p.gender}) &rarr; 
+            <span style="font-weight:700; color:var(--navy);">Seat #${p.seat} (${p.type || ''})</span> 
+            ${p.age > 60 ? '🟡 <small style="color:#d97706; font-weight:700;">(Age Priority LB)</small>' : ''}
+          </div>
+        `).join('')}
+      </td>
+      <td>
+        ${esc(b.source)} &rarr; ${esc(b.dest)}<br>
+        <b style="color:var(--navy);">₹${b.total || 0}</b>
+      </td>
+      <td>${fmt(b.time)}</td>
+      <td>
+        ${isAct ? `<button class="btn r" style="padding:6px 12px; font-size:12px;" onclick="cancelT('${b.pnr}')">Cancel</button>` : '<span style="color:#94a3b8;">Cancelled</span>'}
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan=7 style="text-align:center; padding:24px; color:#64748b;">No bookings created yet. Use the "Book Tickets" tab to allot seats.</td></tr>';
+
+  // Quick tickets
+  $('quick').innerHTML = S.bookings.length ? 'Quick Pick: ' + S.bookings.map(b => `<button onclick="showTicket('${b.pnr}')">${b.pnr} (${b.status})</button>`).join('') : '';
+
+  est();
+}
+
+function fmt(t) {
+  if (!t) return 'N/A';
+  try { return new Date(t).toLocaleString(); } catch(e) { return t; }
+}
+
+function seatInfo(n) {
+  const s = S.seats.find(x => x.n === n);
+  if (!s) return;
+  const o = s.occ;
+  
+  let bodyHtml = `
+    <div style="border-bottom:2px solid #e2e8f0; padding-bottom:12px; margin-bottom:14px;">
+      <h2 style="margin:0;">💺 Seat #${n} &bull; ${s.type} (${FULL[s.type]})</h2>
+      <p style="margin:4px 0 0; color:var(--text-muted); font-size:13px;">Bay ${s.bay} &bull; Coach S1 (Sleeper / 3AC)</p>
+    </div>
+  `;
+
+  if (o) {
+    const isSr = o.age > 60;
+    const prioName = o.priority || o.strategy;
+    let prioBadge = `<span class="badge" style="background:#dc2626; color:#fff;">FCFS (First Come First Served)</span>`;
+    if (prioName === 'SENIOR' || isSr) {
+      prioBadge = `<span class="badge" style="background:#f59e0b; color:#000; font-weight:700;">Age Preference (> 60 Senior Citizen)</span>`;
+    } else if (prioName === 'GROUP' || prioName === 'GROUP+SENIOR') {
+      prioBadge = `<span class="badge" style="background:#2563eb; color:#fff;">Group Booking (Co-located in Bay)</span>`;
+    }
+
+    bodyHtml += `
+      <table style="margin-bottom:14px;">
+        <tr><td style="width:35%;"><b>Section:</b></td><td><span class="badge tag-red">SECTION B (ALLOTTED)</span></td></tr>
+        <tr><td><b>Allotment Priority:</b></td><td>${prioBadge}</td></tr>
+        <tr><td><b>Passenger Name:</b></td><td><b>${esc(o.name)}</b></td></tr>
+        <tr><td><b>Age &amp; Gender:</b></td><td>${o.age} years, ${esc(o.gender)} ${isSr ? '👴 (Senior Citizen Priority)' : ''}</td></tr>
+        <tr><td><b>PNR Number:</b></td><td><b>${esc(o.pnr)}</b></td></tr>
+        <tr><td><b>Journey Route:</b></td><td>🚆 ${esc(o.source)} &rarr; ${esc(o.dest)}</td></tr>
+        <tr><td><b>Ticket Fare:</b></td><td><b style="color:var(--success);">₹${o.price}</b></td></tr>
+        <tr><td><b>Booking Time:</b></td><td>${fmt(o.time)}</td></tr>
+      </table>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <button class="btn" onclick="showTicket('${o.pnr}'); $('modal').style.display='none'; tab('ticket');">View Full Ticket</button>
+        <button class="btn o" onclick="$('modal').style.display='none'">Close</button>
+      </div>
+    `;
+  } else {
+    bodyHtml += `
+      <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:16px; margin-bottom:16px;">
+        <span class="badge tag-white" style="font-size:14px; margin-bottom:8px;">SECTION A: AVAILABLE (WHITE)</span>
+        <p style="margin:8px 0 0; color:#334155;">This berth is currently <b>vacant and available for booking</b>.</p>
+        <p style="margin:4px 0 0; font-size:13px; color:var(--text-muted);">${s.is_lower ? '⭐ Lower berth (priority reserved for seniors age > 60)' : 'Standard berth available for FCFS or Group allocations.'}</p>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <button class="btn g" onclick="$('modal').style.display='none'; tab('book');">Book This Seat</button>
+        <button class="btn o" onclick="$('modal').style.display='none'">Close</button>
+      </div>
+    `;
+  }
+
+  $('mbox').innerHTML = bodyHtml;
+  $('modal').style.display = 'flex';
+}
+
+async function saveCfg() {
+  const src = $('src').value.trim();
+  const dst = $('dst').value.trim();
+  const trn = $('trn').value.trim();
+  const prc = $('prc').value.trim();
+
+  if (!src || !dst) {
+    $('cfgmsg').innerHTML = `<div class="banner-msg e">⚠️ Please enter both Pickup (From) and Destination (To) stations.</div>`;
+    return;
+  }
+
+  const r = await api('/api/config', { source: src, dest: dst, train: trn, price: prc });
+  if (r.error) {
+    $('cfgmsg').innerHTML = `<div class="banner-msg e">❌ ${r.error}</div>`;
+  } else {
+    $('cfgmsg').innerHTML = `
+      <div class="banner-msg s">
+        <div>✓ <b>Route Confirmed!</b> Journey set: <b>${esc(r.config.source)}</b> &rarr; <b>${esc(r.config.dest)}</b> at ₹${r.config.price}/seat.</div>
+        <button class="btn g" style="padding:6px 14px; font-size:13px;" onclick="tab('book')">Proceed to Book Tickets &rarr;</button>
+      </div>
+    `;
+    cfgLoaded = false;
+    load();
+  }
+}
+
+function addRow() {
+  const d = document.createElement('div');
+  d.className = 'row';
+  const count = document.querySelectorAll('#rows .row').length + 1;
+  d.innerHTML = `
+    <div>
+      <label>Passenger Name</label>
+      <input class="n" placeholder="e.g. Passenger ${count}" value="Passenger ${count}">
+    </div>
+    <div>
+      <label>Age</label>
+      <input class="a" type="number" min="1" max="120" placeholder="Age" value="${count === 1 ? 65 : 28}" oninput="est()">
+    </div>
+    <div>
+      <label>Gender</label>
+      <select class="g">
+        <option>Male</option>
+        <option>Female</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div>
+      <label>Berth Preference</label>
+      <select class="p">
+        <option>No Preference</option>
+        <option>Lower Berth (LB)</option>
+        <option>Middle Berth (MB)</option>
+        <option>Upper Berth (UB)</option>
+        <option>Side Lower (SL)</option>
+        <option>Side Upper (SU)</option>
+      </select>
+    </div>
+    <div>
+      <button class="btn r" style="padding:10px 14px; margin-top:20px;" onclick="this.closest('.row').remove(); est();" title="Remove Passenger">✕</button>
+    </div>
+  `;
+  $('rows').appendChild(d);
+  est();
+}
+
+function est() {
+  const rs = [...document.querySelectorAll('#rows .row')];
+  const n = rs.length;
+  if (n === 0) {
+    $('det').textContent = 'No passengers added';
+    $('det').className = 'badge ok';
+    $('tot').textContent = '₹0';
+    return;
+  }
+
+  const sr = rs.some(r => +(r.querySelector('.a').value || 0) > 60);
+  let st = '';
+  let badgeStyle = '';
+
+  if (n === 1) {
+    if (sr) {
+      st = 'SENIOR (Age Preference: Lower Berth Allotted)';
+      badgeStyle = 'background:#f59e0b; color:#000; font-weight:700; border:1px solid #d97706;';
+    } else {
+      st = 'FCFS (First Come First Served - Single Booking)';
+      badgeStyle = 'background:#dc2626; color:#fff;';
+    }
+  } else {
+    if (sr) {
+      st = 'GROUP + SENIOR (Co-located in Bay + Lower Berth for Seniors)';
+      badgeStyle = 'background:#f59e0b; color:#000; font-weight:700; border:2px solid #2563eb;';
+    } else {
+      st = 'GROUP (Co-located in Same Compartment)';
+      badgeStyle = 'background:#2563eb; color:#fff;';
+    }
+  }
+
+  const d = $('det');
+  d.textContent = st;
+  d.setAttribute('style', badgeStyle);
+
+  const pricePerSeat = S && S.config && S.config.price ? S.config.price : 500;
+  $('tot').textContent = '₹' + (n * pricePerSeat);
+}
+
+async function book() {
+  const rows = [...document.querySelectorAll('#rows .row')];
+  if (rows.length === 0) {
+    $('bmsg').innerHTML = `<div class="banner-msg e">⚠️ Please add at least one passenger before confirming booking.</div>`;
+    return;
+  }
+
+  const ps = rows.map((r, idx) => ({
+    name: r.querySelector('.n').value.trim() || `Passenger ${idx + 1}`,
+    age: r.querySelector('.a').value.trim() || 28,
+    gender: r.querySelector('.g').value,
+    preference: r.querySelector('.p').value
+  }));
+
+  const src = $('bsrc').value.trim() || ($('src') ? $('src').value.trim() : '');
+  const dst = $('bdst').value.trim() || ($('dst') ? $('dst').value.trim() : '');
+  const prc = $('bprc').value.trim() || ($('prc') ? $('prc').value.trim() : '');
+
+  const payload = {
+    passengers: ps,
+    source: src,
+    dest: dst,
+    price: prc
+  };
+
+  $('bmsg').innerHTML = `<div class="banner-msg" style="background:#e0f2fe; color:#0369a1;">⏳ Processing seat allocation and booking confirmation...</div>`;
+
+  const r = await api('/api/book', payload);
+  if (r.error) {
+    $('bmsg').innerHTML = `<div class="banner-msg e">❌ ${r.error}</div>`;
+    return;
+  }
+
+  const allocatedSeatsList = r.seats ? r.seats.map(s => `Seat #${s}`).join(', ') : '';
+
+  $('bmsg').innerHTML = `
+    <div class="banner-msg s" style="display:block;">
+      <div style="font-size:16px; margin-bottom:8px;">
+        🎉 <b>Booking Confirmed Successfully!</b> PNR: <b>${r.pnr}</b>
+      </div>
+      <div style="margin-bottom:12px; font-size:14px;">
+        Strategy: <b>${r.strategy}</b> &bull; Allocated Seats: <b>${allocatedSeatsList}</b> &bull; Route: <b>${esc(r.booking.source)} &rarr; ${esc(r.booking.dest)}</b>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn g" onclick="tab('coach')">💺 View Seats in Coach Visualizer</button>
+        <button class="btn" onclick="showTicket('${r.pnr}'); tab('ticket');">📄 View &amp; Print E-Ticket</button>
+      </div>
+    </div>
+  `;
+
+  // Reset form with one clean row
+  $('rows').innerHTML = '';
+  addRow();
+  cfgLoaded = false;
+  load();
+}
+
+async function cancelT(p) {
+  if (!confirm(`Are you sure you want to cancel booking ${p}?\nFreed seats will immediately return to Section A (Available - White color).`)) return;
+  const r = await api('/api/cancel', { pnr: p });
+  if (r.error) {
+    alert(r.error);
+  } else {
+    load();
+  }
+}
+
+function prev() {
+  const g = n => S.seats.find(s => s.n == n);
+  if (!S || !$('sa').value) {
+    $('sprev').innerHTML = '<i>No allotted seats available to swap.</i>';
+    return;
+  }
+
+  const sA = g($('sa').value);
+  const sB = g($('sb').value);
+
+  const cardHtml = s => {
+    if (!s) return '';
+    return `
+      <div class="card" style="border:1px solid #cbd5e1; margin-bottom:0;">
+        <b>Seat #${s.n}</b> &bull; ${s.type} (${FULL[s.type]}) &bull; Bay ${s.bay}<br>
+        ${s.occ ? `
+          <div style="margin-top:6px;">
+            <b>${esc(s.occ.name)}</b> (${s.occ.age}y, ${s.occ.gender})<br>
+            PNR: <b>${s.occ.pnr}</b> &bull; Strategy: <span class="badge tag-priority">${s.occ.strategy}</span>
+          </div>
+        ` : `
+          <div style="margin-top:6px;">
+            <span class="badge tag-white">SECTION A (AVAILABLE)</span>
+          </div>
+        `}
+      </div>
+    `;
+  };
+
+  $('sprev').innerHTML = cardHtml(sA) + cardHtml(sB);
+}
+
+async function doSwap() {
+  const sa = $('sa').value;
+  const sb = $('sb').value;
+  if (!sa || !sb) {
+    $('smsg').innerHTML = `<div class="banner-msg e">Please select both source and target seats.</div>`;
+    return;
+  }
+  const r = await api('/api/swap', { a: sa, b: sb });
+  if (r.error) {
+    $('smsg').innerHTML = `<div class="banner-msg e">❌ ${r.error}</div>`;
+  } else {
+    $('smsg').innerHTML = `<div class="banner-msg s">✓ ${r.message || 'Swap successfully completed!'}</div>`;
+    load();
+  }
+}
+
+function showTicket(p) {
+  $('pnrin').value = p;
+  if (!S || !S.bookings) return;
+  const b = S.bookings.find(x => x.pnr === p);
+  if (!b) {
+    $('ticket').innerHTML = '<div class="banner-msg e">PNR not found. Please verify the PNR code.</div>';
+    return;
+  }
+
+  $('ticket').innerHTML = `
+    <div class="top">
+      <div>
+        <h2 style="margin:0; color:var(--navy);">INDIAN RAILWAYS PASSENGER RESERVATION SYSTEM</h2>
+        <small style="color:var(--text-muted); font-weight:700;">ELECTRONIC RESERVATION SLIP (ERS) &bull; COLLEGE PROJECT</small>
+      </div>
+      <div class="pnrbox">${b.pnr}</div>
+    </div>
+    
+    <table style="margin-bottom:16px;">
+      <tr>
+        <td><small style="color:var(--text-muted);">TRAIN</small><br><b>${esc(b.train || '12004 - Shatabdi Exp')}</b></td>
+        <td><small style="color:var(--text-muted);">COACH</small><br><b>S1 (Sleeper / 3AC)</b></td>
+        <td><small style="color:var(--text-muted);">STATUS</small><br><span class="badge ${b.status==='CONFIRMED'?'ok':'bad'}">${b.status}</span></td>
+        <td><small style="color:var(--text-muted);">STRATEGY</small><br><b>${b.strategy}</b></td>
+      </tr>
+      <tr>
+        <td><small style="color:var(--text-muted);">FROM (SOURCE)</small><br><b>${esc(b.source)}</b></td>
+        <td><small style="color:var(--text-muted);">TO (DESTINATION)</small><br><b>${esc(b.dest)}</b></td>
+        <td><small style="color:var(--text-muted);">BOOKED AT</small><br><b>${fmt(b.time)}</b></td>
+        <td><small style="color:var(--text-muted);">TOTAL FARE PAID</small><br><b style="color:var(--navy); font-size:16px;">₹${b.total}</b></td>
+      </tr>
+    </table>
+
+    <h3 style="margin:16px 0 8px; color:var(--navy); font-size:16px;">Passenger Allotment Details</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Age / Gender</th>
+          <th>Seat #</th>
+          <th>Berth Type &amp; Bay</th>
+          <th>Priority Allotment</th>
+          <th>Fare</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${b.passengers.map((p, i) => {
+          const seatObj = S.seats[p.seat - 1] || {};
+          const isSr = p.age > 60;
+          return `<tr>
+            <td>${i + 1}</td>
+            <td><b>${esc(p.name)}</b></td>
+            <td>${p.age}y / ${p.gender}</td>
+            <td><b style="font-size:16px; color:var(--navy);">#${p.seat}</b></td>
+            <td>${seatObj.type || p.type || 'LB'} (Bay ${seatObj.bay || p.bay || 1})</td>
+            <td>
+              ${isSr ? '<span class="badge" style="background:#f59e0b; color:#000; font-weight:700;">🟡 Age Priority (Lower Berth)</span>' : (b.passengers.length > 1 ? '<span class="badge" style="background:#2563eb; color:#fff;">🔵 Group Allotment</span>' : '<span class="badge" style="background:#dc2626; color:#fff;">🔴 FCFS Allotment</span>')}
+            </td>
+            <td>₹${b.price}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+async function dl(f) {
+  const el = $('ticket');
+  if (!el.querySelector('table')) return alert('Please enter or select a valid PNR first.');
+  const cv = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff' });
+  const name = $('pnrin').value || 'railway_ticket';
+  if (f === 'png') {
+    const a = document.createElement('a');
+    a.href = cv.toDataURL('image/png');
+    a.download = name + '.png';
+    a.click();
+  } else {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('l', 'mm', 'a4');
+    const w = 277, h = cv.height * w / cv.width;
+    pdf.addImage(cv.toDataURL('image/png'), 'PNG', 10, 10, w, Math.min(h, 190));
+    pdf.save(name + '.pdf');
+  }
+}
+
+async function resetAll() {
+  if (!confirm('⚠️ Are you sure you want to clear ALL bookings and reset the coach back to 72 Available seats?')) return;
+  await api('/api/reset', {});
+  cfgLoaded = false;
+  load();
+}
+
+// Initial Setup
+tab('coach');
+addRow();
+load();
+</script>
+</body>
+</html>

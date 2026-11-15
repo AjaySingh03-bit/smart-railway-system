@@ -1,0 +1,9 @@
+{
+  "config": {
+    "train": "12004 - Lucknow Shatabdi Exp",
+    "source": "New Delhi (NDLS)",
+    "dest": "Lucknow (LKO)",
+    "price": 500
+  },
+  "bookings": {}
+}
